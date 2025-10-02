@@ -49,13 +49,8 @@ create_file ".saturnci/Dockerfile", <<~DOCKERFILE
   COPY Gemfile Gemfile.lock ./
   RUN bundle install && rm -rf /usr/local/bundle/cache/*
 
-  COPY app/assets ./app/assets
-  COPY app/javascript ./app/javascript
-  COPY app/views ./app/views
-  COPY config/environments ./config/environments
-  COPY config/initializers ./config/initializers
-  COPY config/application.rb config/boot.rb config/environment.rb ./config/
-  COPY public ./public
+  # Copy all application files. Use .dockerignore to exclude unnecessary files.
+  COPY . ./
 
   # Dummy database environment variables required for asset precompilation.
   # Rails loads the application environment during asset compilation, which
@@ -69,8 +64,6 @@ create_file ".saturnci/Dockerfile", <<~DOCKERFILE
 
   RUN bundle exec rails assets:precompile && \\
       rm -rf tmp/cache node_modules/.cache
-
-  COPY . ./
 
   CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
 DOCKERFILE
@@ -214,6 +207,31 @@ create_file ".saturnci/.env", <<~ENV
 
   SATURN_TEST_APP_IMAGE_URL=""
 ENV
+
+# Create .dockerignore for .saturnci directory
+create_file ".saturnci/.dockerignore", <<~DOCKERIGNORE
+  # Version control
+  .git
+  .gitignore
+
+  # Logs and temp files
+  log
+  tmp
+  *.log
+
+  # Dependency directories
+  node_modules
+  coverage
+
+  # Environment and secrets
+  .env*
+
+  # Documentation
+  *.md
+
+  # System files
+  .DS_Store
+DOCKERIGNORE
 
 # Create .gitignore for .saturnci directory
 create_file ".saturnci/.gitignore", <<~GITIGNORE
