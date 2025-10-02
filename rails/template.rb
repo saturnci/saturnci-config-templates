@@ -194,7 +194,7 @@ SCRIPT
 
 create_file ".saturnci/pre.sh", <<~SCRIPT
   #!/bin/bash
-  bundle exec rails db:create db:schema:load
+  bundle exec rails db:prepare
 SCRIPT
 
 # Make shell scripts executable
