@@ -192,10 +192,16 @@ create_file ".saturnci/run.sh", <<~SCRIPT
   docker-compose -f .saturnci/docker-compose.yml run saturn_test_app $@
 SCRIPT
 
+create_file ".saturnci/pre.sh", <<~SCRIPT
+  #!/bin/bash
+  bundle exec rails db:create db:schema:load
+SCRIPT
+
 # Make shell scripts executable
 chmod ".saturnci/up.sh", 0755
 chmod ".saturnci/down.sh", 0755
 chmod ".saturnci/run.sh", 0755
+chmod ".saturnci/pre.sh", 0755
 
 # Create basic .env file (without sensitive credentials)
 create_file ".saturnci/.env", <<~ENV
