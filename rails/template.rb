@@ -134,7 +134,6 @@ create_file ".saturnci/docker-compose.yml", <<~DOCKERCOMPOSE
       image: postgres:17.2-alpine
       volumes:
         - postgresql:/var/lib/postgresql/data:delegated
-        - ./init.sql:/data/application/init.sql
       ports:
         - "127.0.0.1:5432:5432"
       environment:
