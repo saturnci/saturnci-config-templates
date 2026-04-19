@@ -97,7 +97,7 @@ create_file ".saturnci/docker-compose.yml", <<~DOCKERCOMPOSE
       # This hostname is what will go in the Capybara host config.
       hostname: saturn_test_app
 
-      image: \${SATURN_TEST_APP_IMAGE_URL:-saturnci-local}
+      image: \${SATURN_TEST_APP_IMAGE_URL}
       build:
         context: ..
         dockerfile: .saturnci/Dockerfile
