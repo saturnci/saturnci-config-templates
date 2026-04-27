@@ -43,6 +43,9 @@ create_file ".saturnci/Dockerfile", <<~DOCKERFILE
       # Install version control system for dependency management.
       git \\
 
+      # Install libyaml headers required to build the psych gem on Ruby 3.2+.
+      libyaml-dev \\
+
       # Clean up package cache to reduce image size.
       && rm -rf /var/lib/apt/lists/*
 
