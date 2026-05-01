@@ -200,11 +200,114 @@ create_file ".saturnci/pre.sh", <<~SCRIPT
   bundle exec rails db:prepare
 SCRIPT
 
+# Detect the GitHub repository full name (e.g., "owner/repo") from git remote.
+github_repo_full_name =
+  begin
+    remote_url = `git config --get remote.origin.url`.strip
+    if (match = remote_url.match(%r{github\.com[:/]([^/]+/[^/.]+)(?:\.git)?$}))
+      match[1]
+    else
+      "your-org/your-repo"
+    end
+  end
+
+# Create entrypoint job that triggers a rails_rspec test suite run on every push.
+empty_directory ".saturnci/jobs/entrypoint"
+
+create_file ".saturnci/jobs/entrypoint/run", <<~RUN
+  #!/usr/bin/env ruby
+
+  def run(io, error_io, github_event, client)
+    io.puts "SaturnCI SDK version: \#{SaturnCI::VERSION}"
+
+    return 0 unless github_event == "push"
+    return 0 if ENV['DELETED'] == "true"
+
+    branch_name = ENV['BRANCH_NAME']
+    if branch_name.to_s.empty?
+      error_io.puts "BRANCH_NAME env var is required"
+      return 1
+    end
+
+    commit_hash = ENV['COMMIT_HASH']
+    if commit_hash.to_s.empty?
+      error_io.puts "COMMIT_HASH env var is required"
+      return 1
+    end
+
+    commit_message = ENV['COMMIT_MESSAGE']
+    author_name = ENV['AUTHOR_NAME']
+
+    io.puts "Branch name: \#{branch_name}"
+    io.puts "Commit hash: \#{commit_hash}"
+    io.puts "Commit message: \#{commit_message}"
+    io.puts "Author name: \#{author_name}"
+
+    test_suite_run = SaturnCI::TestSuiteRun.create(
+      client: client,
+      repository: '#{github_repo_full_name}',
+      branch_name: branch_name,
+      commit_hash: commit_hash,
+      commit_message: commit_message,
+      author_name: author_name,
+      task_adapter_name: 'rails_rspec'
+    )
+
+    io.puts "Testing: \#{test_suite_run.url}"
+    test_suite_run.wait_for_completion
+    io.puts "Tests \#{test_suite_run.status.downcase}."
+
+    0
+  end
+
+  def client
+    SaturnCI::Client.new(credentials)
+  end
+
+  def credentials
+    SaturnCI::Credentials.new(
+      api_token: ENV.fetch('SATURNCI_API_TOKEN')
+    )
+  end
+
+  exit run($stdout, $stderr, ENV['GITHUB_EVENT'], client) if $PROGRAM_NAME == __FILE__
+RUN
+
+create_file ".saturnci/jobs/entrypoint/Dockerfile", <<~DOCKERFILE
+  FROM ruby:3.4-slim AS builder
+
+  RUN apt-get update && apt-get install -y \\
+    git \\
+    && rm -rf /var/lib/apt/lists/*
+
+  RUN git clone https://github.com/saturnci/saturnci-sdk.git /tmp/saturnci-sdk \\
+    && cd /tmp/saturnci-sdk \\
+    && gem build saturnci-sdk.gemspec
+
+  FROM ruby:3.4-slim
+  COPY --from=builder /tmp/saturnci-sdk/saturnci-sdk-*.gem /tmp/
+  RUN gem install /tmp/saturnci-sdk-*.gem && rm /tmp/saturnci-sdk-*.gem
+
+  ENTRYPOINT ["ruby", "-rsaturnci-sdk"]
+DOCKERFILE
+
+create_file ".saturnci/jobs/entrypoint/docker-compose.yml", <<~DOCKERCOMPOSE
+  services:
+    job:
+      build:
+        context: ../../..
+        dockerfile: .saturnci/jobs/entrypoint/Dockerfile
+      volumes:
+        - ../../../:/app
+      working_dir: /app
+DOCKERCOMPOSE
+
 # Make shell scripts executable
 chmod ".saturnci/up.sh", 0755
 chmod ".saturnci/down.sh", 0755
 chmod ".saturnci/run.sh", 0755
 chmod ".saturnci/pre.sh", 0755
+chmod ".saturnci/jobs/entrypoint/run", 0755
 
 # Create basic .env file (without sensitive credentials)
 create_file ".saturnci/.env", <<~ENV
