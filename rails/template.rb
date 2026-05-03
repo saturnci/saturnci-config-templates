@@ -266,7 +266,7 @@ create_file ".saturnci/jobs/entrypoint/run", <<~RUN
 
   def credentials
     SaturnCI::Credentials.new(
-      api_token: ENV.fetch('SATURNCI_API_TOKEN')
+      api_token: ENV.fetch('SATURNCI_ACCESS_TOKEN')
     )
   end
 
