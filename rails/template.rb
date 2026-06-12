@@ -280,7 +280,7 @@ create_file ".saturnci/jobs/entrypoint/Dockerfile", <<~DOCKERFILE
     git \\
     && rm -rf /var/lib/apt/lists/*
 
-  RUN git clone https://github.com/saturnci/saturnci-sdk.git /tmp/saturnci-sdk \\
+  RUN git clone --depth 1 --branch v0.11.0 https://github.com/saturnci/saturnci-sdk.git /tmp/saturnci-sdk \\
     && cd /tmp/saturnci-sdk \\
     && gem build saturnci-sdk.gemspec
 
