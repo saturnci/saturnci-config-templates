@@ -8,15 +8,18 @@ say "Adding SaturnCI configuration to your Rails application..."
 # Create .saturnci directory
 empty_directory ".saturnci"
 
+# Create the test_suite job directory
+empty_directory ".saturnci/jobs/test_suite"
+
 # Create Dockerfile for SaturnCI test environment
-create_file ".saturnci/Dockerfile", <<~DOCKERFILE
+create_file ".saturnci/jobs/test_suite/Dockerfile", <<~DOCKERFILE
   # SaturnCI Test Environment Docker Image
   #
   # This Dockerfile creates the container image that SaturnCI uses to run
   # your tests. It includes all necessary dependencies for a Rails application with
   # PostgreSQL and handles asset precompilation during the build process.
   #
-  # This image is used by .saturnci/docker-compose.yml to create the test execution environment.
+  # This image is used by .saturnci/jobs/test_suite/docker-compose.yml to create the test execution environment.
 
   # Use ruby:4.0.1-slim as the base image. This provides a pre-built Linux
   # environment with Ruby already installed. The "slim" version contains only
@@ -72,14 +75,14 @@ create_file ".saturnci/Dockerfile", <<~DOCKERFILE
 DOCKERFILE
 
 # Create docker-compose.yml for SaturnCI
-create_file ".saturnci/docker-compose.yml", <<~DOCKERCOMPOSE
+create_file ".saturnci/jobs/test_suite/docker-compose.yml", <<~DOCKERCOMPOSE
   # SaturnCI Docker Environment
   #
   # This Docker Compose file specifies the environment that SaturnCI uses to run
   # your tests.
   #
   # Local Development Usage:
-  #   cd .saturnci
+  #   cd .saturnci/jobs/test_suite
   #
   #   Start all services
   #   docker-compose up -d
@@ -102,17 +105,17 @@ create_file ".saturnci/docker-compose.yml", <<~DOCKERCOMPOSE
 
       image: \${SATURN_TEST_APP_IMAGE_URL}
       build:
-        context: ..
-        dockerfile: .saturnci/Dockerfile
+        context: ../../..
+        dockerfile: .saturnci/jobs/test_suite/Dockerfile
       volumes:
-        - ../:/app
+        - ../../../:/app
         - ./database.yml:/app/config/database.yml:ro
       depends_on:
         - postgres
         - chrome
 
-      # .saturnci/.env is where SaturnCI will put the environment variables
-      # that you set in your repository's Secrets section in Settings.
+      # .saturnci/jobs/test_suite/.env is where SaturnCI will put the environment
+      # variables that you set in your repository's Secrets section in Settings.
       #
       # Optionally, you can add a local .saturnci.env file to provide environment
       # variables when you run your SaturnCI setup locally.
@@ -169,7 +172,7 @@ create_file ".saturnci/docker-compose.yml", <<~DOCKERCOMPOSE
 DOCKERCOMPOSE
 
 # Create database.yml for test environment
-create_file ".saturnci/database.yml", <<~DATABASE
+create_file ".saturnci/jobs/test_suite/database.yml", <<~DATABASE
   test:
     database: saturn_test
     adapter: postgresql
@@ -182,17 +185,17 @@ DATABASE
 # Create convenience shell scripts
 create_file ".saturnci/up.sh", <<~SCRIPT
   #!/bin/bash
-  docker-compose -f .saturnci/docker-compose.yml up -d
+  docker-compose -f .saturnci/jobs/test_suite/docker-compose.yml up -d
 SCRIPT
 
 create_file ".saturnci/down.sh", <<~SCRIPT
   #!/bin/bash
-  docker-compose -f .saturnci/docker-compose.yml down --remove-orphans
+  docker-compose -f .saturnci/jobs/test_suite/docker-compose.yml down --remove-orphans
 SCRIPT
 
 create_file ".saturnci/run.sh", <<~SCRIPT
   #!/bin/bash
-  docker-compose -f .saturnci/docker-compose.yml run saturn_test_app $@
+  docker-compose -f .saturnci/jobs/test_suite/docker-compose.yml run saturn_test_app $@
 SCRIPT
 
 create_file ".saturnci/pre.sh", <<~SCRIPT
@@ -310,7 +313,7 @@ chmod ".saturnci/pre.sh", 0755
 chmod ".saturnci/jobs/entrypoint/run", 0755
 
 # Create basic .env file (without sensitive credentials)
-create_file ".saturnci/.env", <<~ENV
+create_file ".saturnci/jobs/test_suite/.env", <<~ENV
   DATABASE_USERNAME=saturn
   DATABASE_PASSWORD=""
   DATABASE_HOST=127.0.0.1
@@ -319,8 +322,8 @@ create_file ".saturnci/.env", <<~ENV
   SATURN_TEST_APP_IMAGE_URL=""
 ENV
 
-# Create .dockerignore for .saturnci directory
-create_file ".saturnci/.dockerignore", <<~DOCKERIGNORE
+# Create .dockerignore for the test_suite job
+create_file ".saturnci/jobs/test_suite/.dockerignore", <<~DOCKERIGNORE
   # Version control
   .git
   .gitignore
@@ -346,7 +349,7 @@ DOCKERIGNORE
 
 # Create .gitignore for .saturnci directory
 create_file ".saturnci/.gitignore", <<~GITIGNORE
-  .env
+  jobs/test_suite/.env
 GITIGNORE
 
 # Add RSpec if not already present
@@ -361,9 +364,8 @@ say "SaturnCI configuration has been added to your Rails application!"
 say ""
 say "Next steps:"
 say "1. Run 'bundle install' to install any new gems"
-say "2. Navigate to .saturnci directory: cd .saturnci"
-say "3. Start the test environment: ./up.sh"
-say "4. Run your tests: ./run.sh bundle exec rspec"
-say "5. Stop the environment: ./down.sh"
+say "2. Start the test environment: .saturnci/up.sh"
+say "3. Run your tests: .saturnci/run.sh bundle exec rspec"
+say "4. Stop the environment: .saturnci/down.sh"
 say ""
 say "You can now add this repository to SaturnCI at https://app.saturnci.com"
