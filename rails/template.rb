@@ -249,6 +249,7 @@ create_file ".saturnci/jobs/entrypoint/run", <<~RUN
     test_suite_run = SaturnCI::TestSuiteRun.create(
       client: client,
       repository: '#{github_repo_full_name}',
+      job_name: 'test_suite',
       branch_name: branch_name,
       commit_hash: commit_hash,
       commit_message: commit_message,
