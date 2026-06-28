@@ -16,8 +16,61 @@ say "Adding SaturnCI configuration to your Rails application..."
 #       .env
 #       .dockerignore
 
+empty_directory ".saturnci/jobs/github_push"
 empty_directory ".saturnci/jobs/test_suite"
+empty_directory ".saturnci/environments/default"
 empty_directory ".saturnci/environments/rspec"
+
+# The github_push job runs when SaturnCI receives a push. Its #after hook
+# decides what runs next -- here, it triggers the test suite.
+create_file ".saturnci/jobs/github_push/config.yml", <<~CONFIG
+  environment: default
+CONFIG
+
+create_file ".saturnci/jobs/github_push/github_push_job.rb", <<~RUBY
+  class GitHubPushJob
+    def after(job_run)
+      [
+        {
+          task_adapter_name: "rails_rspec",
+          job_name: "test_suite",
+          job_run_type: "test_suite_run"
+        }
+      ]
+    end
+  end
+RUBY
+
+# The "default" environment is a lightweight Ruby + SaturnCI SDK image used by
+# orchestration jobs like github_push that only run an #after hook.
+create_file ".saturnci/environments/default/Dockerfile", <<~DOCKERFILE
+  FROM ruby:4.0.1-slim AS builder
+
+  RUN apt-get update && apt-get install -y \\
+    git \\
+    && rm -rf /var/lib/apt/lists/*
+
+  RUN git clone https://github.com/saturnci/saturnci-sdk.git /tmp/saturnci-sdk \\
+    && cd /tmp/saturnci-sdk \\
+    && gem build saturnci-sdk.gemspec
+
+  FROM ruby:4.0.1-slim
+  COPY --from=builder /tmp/saturnci-sdk/saturnci-sdk-*.gem /tmp/
+  RUN gem install /tmp/saturnci-sdk-*.gem && rm /tmp/saturnci-sdk-*.gem
+
+  ENTRYPOINT ["ruby", "-rsaturnci-sdk"]
+DOCKERFILE
+
+create_file ".saturnci/environments/default/docker-compose.yml", <<~DOCKERCOMPOSE
+  services:
+    job:
+      build:
+        context: ../../..
+        dockerfile: .saturnci/environments/default/Dockerfile
+      volumes:
+        - ../../../:/app
+      working_dir: /app
+DOCKERCOMPOSE
 
 # The test suite job. It declares which environment it runs in.
 create_file ".saturnci/jobs/test_suite/config.yml", <<~CONFIG
