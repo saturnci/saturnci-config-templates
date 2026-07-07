@@ -8,6 +8,7 @@ say "Adding SaturnCI configuration to your Rails application..."
 # SaturnCI uses a config-based layout:
 #
 #   .saturnci/
+#     jobs/github_push/                   <- the job that runs on every push
 #     jobs/test_suite/config.yml          <- the test suite job, points at an environment
 #     environments/rspec/                 <- the reusable environment the job runs in
 #       Dockerfile
@@ -15,21 +16,50 @@ say "Adding SaturnCI configuration to your Rails application..."
 #       database.yml
 #       .env
 #       .dockerignore
+#     transitions/                        <- transitions decide what runs next
 
 empty_directory ".saturnci/jobs/github_push"
 empty_directory ".saturnci/jobs/test_suite"
-empty_directory ".saturnci/environments/default"
 empty_directory ".saturnci/environments/rspec"
+empty_directory ".saturnci/transitions"
 
-# The github_push job runs when SaturnCI receives a push. Its #after hook
-# decides what runs next -- here, it triggers the test suite.
+# The github_push job runs when SaturnCI receives a push. It clones the
+# repository into the pipeline workspace. It runs in the saturnci/transition
+# environment, which SaturnCI provides.
 create_file ".saturnci/jobs/github_push/config.yml", <<~CONFIG
-  environment: default
+  environment: saturnci/transition
 CONFIG
 
 create_file ".saturnci/jobs/github_push/github_push_job.rb", <<~RUBY
   class GitHubPushJob
-    def after(job_run)
+    def initialize(io: $stdout)
+      @io = io
+    end
+
+    def perform(job_run)
+      if job_run.environment.file_exists?(job_run.pipeline_workspace_dir)
+        @io.puts "Working copy of \#{job_run.repository.github_repo_full_name} " \\
+                 "found at \#{job_run.pipeline_workspace_dir}"
+      else
+        @io.puts "Working copy of \#{job_run.repository.github_repo_full_name} not found in pipeline workspace, " \\
+                 "cloning into \#{job_run.pipeline_workspace_dir}"
+        job_run.environment.clone_repo
+      end
+    end
+  end
+
+  if $PROGRAM_NAME == __FILE__
+    client = SaturnCI::Client.new(SaturnCI::Credentials.new(api_token: ENV.fetch('SATURNCI_ACCESS_TOKEN')))
+    job_run = SaturnCI::JobRun.find(client: client, id: ENV.fetch('JOB_RUN_ID'))
+    GitHubPushJob.new(io: $stdout).perform(job_run)
+  end
+RUBY
+
+# The github_push job's transition decides what runs next -- here, it
+# triggers the test suite.
+create_file ".saturnci/transitions/github_push_transition.rb", <<~RUBY
+  class GitHubPushTransition
+    def after(_job_run)
       [
         {
           task_adapter_name: "rails_rspec",
@@ -40,37 +70,6 @@ create_file ".saturnci/jobs/github_push/github_push_job.rb", <<~RUBY
     end
   end
 RUBY
-
-# The "default" environment is a lightweight Ruby + SaturnCI SDK image used by
-# orchestration jobs like github_push that only run an #after hook.
-create_file ".saturnci/environments/default/Dockerfile", <<~DOCKERFILE
-  FROM ruby:4.0.1-slim AS builder
-
-  RUN apt-get update && apt-get install -y \\
-    git \\
-    && rm -rf /var/lib/apt/lists/*
-
-  RUN git clone https://github.com/saturnci/saturnci-sdk.git /tmp/saturnci-sdk \\
-    && cd /tmp/saturnci-sdk \\
-    && gem build saturnci-sdk.gemspec
-
-  FROM ruby:4.0.1-slim
-  COPY --from=builder /tmp/saturnci-sdk/saturnci-sdk-*.gem /tmp/
-  RUN gem install /tmp/saturnci-sdk-*.gem && rm /tmp/saturnci-sdk-*.gem
-
-  ENTRYPOINT ["ruby", "-rsaturnci-sdk"]
-DOCKERFILE
-
-create_file ".saturnci/environments/default/docker-compose.yml", <<~DOCKERCOMPOSE
-  services:
-    job:
-      build:
-        context: ../../..
-        dockerfile: .saturnci/environments/default/Dockerfile
-      volumes:
-        - ../../../:/app
-      working_dir: /app
-DOCKERCOMPOSE
 
 # The test suite job. It declares which environment it runs in.
 create_file ".saturnci/jobs/test_suite/config.yml", <<~CONFIG
