@@ -8,7 +8,7 @@ say "Adding SaturnCI configuration to your Rails application..."
 # SaturnCI uses a config-based layout:
 #
 #   .saturnci/
-#     jobs/github_push/                   <- the job that runs on every push
+#     jobs/clone_repo/                    <- the job that runs on every push
 #     jobs/test_suite/config.yml          <- the test suite job, points at an environment
 #     environments/rspec/                 <- the reusable environment the job runs in
 #       Dockerfile
@@ -18,14 +18,62 @@ say "Adding SaturnCI configuration to your Rails application..."
 #       .dockerignore
 #     transitions/                        <- transitions decide what runs next
 
+empty_directory ".saturnci/jobs/clone_repo"
 empty_directory ".saturnci/jobs/github_push"
 empty_directory ".saturnci/jobs/test_suite"
 empty_directory ".saturnci/environments/rspec"
 empty_directory ".saturnci/transitions"
 
-# The github_push job runs when SaturnCI receives a push. It clones the
+# The clone_repo job runs when SaturnCI receives a push. It clones the
 # repository into the pipeline workspace. It runs in the saturnci/transition
 # environment, which SaturnCI provides.
+create_file ".saturnci/jobs/clone_repo/config.yml", <<~CONFIG
+  environment: saturnci/transition
+CONFIG
+
+create_file ".saturnci/jobs/clone_repo/clone_repo_job.rb", <<~RUBY
+  class CloneRepoJob
+    def initialize(io: $stdout)
+      @io = io
+    end
+
+    def perform(job_run)
+      if job_run.environment.file_exists?(job_run.pipeline_workspace_dir)
+        @io.puts "Working copy of \#{job_run.repository.github_repo_full_name} " \\
+                 "found at \#{job_run.pipeline_workspace_dir}"
+      else
+        @io.puts "Working copy of \#{job_run.repository.github_repo_full_name} not found in pipeline workspace, " \\
+                 "cloning into \#{job_run.pipeline_workspace_dir}"
+        job_run.environment.clone_repo
+      end
+    end
+  end
+
+  if $PROGRAM_NAME == __FILE__
+    client = SaturnCI::Client.new(SaturnCI::Credentials.new(api_token: ENV.fetch('SATURNCI_ACCESS_TOKEN')))
+    job_run = SaturnCI::JobRun.find(client: client, id: ENV.fetch('JOB_RUN_ID'))
+    CloneRepoJob.new(io: $stdout).perform(job_run)
+  end
+RUBY
+
+# The clone_repo job's transition decides what runs next -- here, it
+# triggers the test suite.
+create_file ".saturnci/transitions/clone_repo_transition.rb", <<~RUBY
+  class CloneRepoTransition
+    def after(_job_run)
+      [
+        {
+          task_adapter_name: "rails_rspec",
+          job_name: "test_suite",
+          job_run_type: "test_suite_run"
+        }
+      ]
+    end
+  end
+RUBY
+
+# github_push is the legacy name for the clone_repo job. Repositories created
+# before the rename run it; these files are kept during the migration.
 create_file ".saturnci/jobs/github_push/config.yml", <<~CONFIG
   environment: saturnci/transition
 CONFIG
