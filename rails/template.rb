@@ -8,6 +8,7 @@ say "Adding SaturnCI configuration to your Rails application..."
 # SaturnCI uses a config-based layout:
 #
 #   .saturnci/
+#     workflows/default_workflow.rb       <- what runs on every push
 #     jobs/test_suite/config.yml          <- the test suite job, points at an environment
 #     environments/rspec/                 <- the reusable environment the job runs in
 #       Dockerfile
@@ -16,6 +17,7 @@ say "Adding SaturnCI configuration to your Rails application..."
 #       .env
 #       .dockerignore
 
+empty_directory ".saturnci/workflows"
 empty_directory ".saturnci/jobs/test_suite"
 empty_directory ".saturnci/environments/rspec"
 
@@ -226,6 +228,62 @@ create_file ".saturnci/environments/rspec/.dockerignore", <<~DOCKERIGNORE
   # System files
   .DS_Store
 DOCKERIGNORE
+
+# The workflow. SaturnCI runs .saturnci/workflows/default_workflow.rb on every
+# push, so this file is required — without it the run fails immediately with
+# "No such file or directory" and no test suite run is ever created.
+create_file ".saturnci/workflows/default_workflow.rb", <<~WORKFLOW
+  # SaturnCI runs this file on every push. It decides what jobs to run.
+  #
+  # This default version runs the test suite and finishes. As you add jobs under
+  # .saturnci/jobs, start them here too.
+  class DefaultWorkflow
+    def initialize(env: ENV)
+      @env = env
+    end
+
+    def perform(io: $stdout)
+      test_suite_run = workflow_run.test_suite_runs.create(
+        job_name: "test_suite",
+        task_adapter_name: "rails_rspec",
+        idempotent: true
+      )
+
+      test_suite_run.start
+
+      io.puts "Started test_suite run: id=\#{test_suite_run.id} url=\#{test_suite_run.url}"
+
+      # SaturnCI re-runs this workflow as jobs complete, so only finish once the
+      # test suite has actually reported back. Finishing straight after start
+      # would close the workflow while the suite was still running.
+      workflow_run.finish if test_suite_run_finished?
+    end
+
+    private
+
+    def test_suite_run_finished?
+      run = workflow_run.job_runs.list(job_name: "test_suite").first
+      return false unless run
+
+      run.passed? || run.failed?
+    end
+
+    def workflow_run
+      @workflow_run ||= SaturnCI::WorkflowRun.find(
+        client: saturnci_client,
+        id: @env.fetch("WORKFLOW_RUN_ID")
+      )
+    end
+
+    def saturnci_client
+      SaturnCI::Client.new(
+        SaturnCI::Credentials.new(api_token: @env.fetch("SATURNCI_ACCESS_TOKEN"))
+      )
+    end
+  end
+
+  DefaultWorkflow.new.perform if $PROGRAM_NAME == __FILE__
+WORKFLOW
 
 # .gitignore for the .saturnci directory
 create_file ".saturnci/.gitignore", <<~GITIGNORE
