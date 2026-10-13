@@ -13,7 +13,6 @@ say "Adding SaturnCI configuration to your Rails application..."
 #     environments/rspec/                 <- the reusable environment the job runs in
 #       Dockerfile
 #       docker-compose.yml
-#       .env
 #       .dockerignore
 
 rspec_environment_dir = ".saturnci/environments/rspec"
@@ -156,16 +155,6 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
       image: selenium/standalone-chromium
       shm_size: 2g
 DOCKERCOMPOSE
-
-# Basic .env file (without sensitive credentials)
-create_file "#{rspec_environment_dir}/.env", <<~ENV
-  DATABASE_USERNAME=postgres
-  DATABASE_PASSWORD=""
-  DATABASE_HOST=127.0.0.1
-  DATABASE_PORT=5432
-
-  SATURN_TEST_APP_IMAGE_URL=""
-ENV
 
 # .dockerignore for the environment
 create_file "#{rspec_environment_dir}/.dockerignore", <<~DOCKERIGNORE
