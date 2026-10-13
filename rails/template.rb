@@ -172,7 +172,7 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
         driver: none
 
     chrome:
-      image: seleniarm/standalone-chromium
+      image: selenium/standalone-chromium
       shm_size: 2g
 
   volumes:
