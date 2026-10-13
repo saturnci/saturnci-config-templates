@@ -145,7 +145,7 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
         SATURNCI_ENV: "true"
         # No database name in the URL, so Rails keeps the one from your own
         # config/database.yml and takes only the connection details from here.
-        DATABASE_URL: postgres://saturn@postgres:5432
+        DATABASE_URL: postgres://postgres@postgres:5432
         RAILS_ENV: test
 
       healthcheck:
@@ -160,11 +160,10 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
         - postgresql:/var/lib/postgresql/data:delegated
       environment:
         PSQL_HISTFILE: /usr/src/app/log/.psql_history
-        POSTGRES_USER: saturn
         POSTGRES_HOST_AUTH_METHOD: trust
       restart: on-failure
       healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U saturn"]
+        test: ["CMD-SHELL", "pg_isready -U postgres"]
         interval: 10s
         timeout: 2s
         retries: 10
@@ -186,7 +185,7 @@ DOCKERCOMPOSE
 
 # Basic .env file (without sensitive credentials)
 create_file "#{rspec_environment_dir}/.env", <<~ENV
-  DATABASE_USERNAME=saturn
+  DATABASE_USERNAME=postgres
   DATABASE_PASSWORD=""
   DATABASE_HOST=127.0.0.1
   DATABASE_PORT=5432
