@@ -300,8 +300,8 @@ create_file "spec/support/saturnci_capybara.rb", <<~CAPYBARA
     end
 
     Capybara.server_host = "0.0.0.0"
-    Capybara.server_port = 3000
-    Capybara.app_host = "http://\#{Socket.gethostname}:3000"
+    Capybara.app_host = "http://\#{Socket.gethostname}"
+    Capybara.always_include_port = true
 
     RSpec.configure do |config|
       config.before(:each, type: :system) do
