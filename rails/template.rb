@@ -151,21 +151,12 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
 
     postgres:
       image: postgres:17.2-alpine
-      volumes:
-        - postgresql:/var/lib/postgresql/data:delegated
       environment:
-        PSQL_HISTFILE: /usr/src/app/log/.psql_history
         POSTGRES_HOST_AUTH_METHOD: trust
-      restart: on-failure
-      logging:
-        driver: none
 
     chrome:
       image: selenium/standalone-chromium
       shm_size: 2g
-
-  volumes:
-    postgresql:
 DOCKERCOMPOSE
 
 # Basic .env file (without sensitive credentials)
