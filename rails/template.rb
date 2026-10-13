@@ -79,21 +79,6 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
   #
   # This Docker Compose file specifies the environment that SaturnCI uses to run
   # your tests.
-  #
-  # Local Development Usage:
-  #   cd #{rspec_environment_dir}
-  #
-  #   Start all services
-  #   docker-compose up -d
-  #
-  #   Get shell in app container
-  #   docker-compose run saturnci_test_app bash
-  #
-  #   Run tests
-  #   docker-compose run saturnci_test_app bundle exec rspec
-  #
-  #   Stop and remove containers
-  #   docker-compose down
 
   version: "3.8"
 
@@ -114,9 +99,6 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
 
       # .env is where SaturnCI will put the environment variables that you set
       # in your repository's Secrets section in Settings.
-      #
-      # Optionally, you can add a local .saturnci.env file to provide environment
-      # variables when you run your SaturnCI setup locally.
       env_file:
         - .env
 
