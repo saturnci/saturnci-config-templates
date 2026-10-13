@@ -1,0 +1,8 @@
+services:
+  job:
+    build:
+      context: ../../..
+      dockerfile: .saturnci/environments/rails_template/Dockerfile
+    volumes:
+      - ../../../:/app
+    working_dir: /app
