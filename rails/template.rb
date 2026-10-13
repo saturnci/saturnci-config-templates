@@ -35,38 +35,19 @@ create_file "#{rspec_environment_dir}/Dockerfile", <<~DOCKERFILE
   # This Dockerfile creates the container image that SaturnCI uses to run
   # your tests. It holds Ruby, system packages, and gems. The app's code is mounted
   # in at run time, and SaturnCI precompiles assets then.
-  #
-  # This image is used by the environment's docker-compose.yml to create the test
-  # execution environment.
 
-  # SaturnCI passes your app's .ruby-version in as SATURNCI_RUBY_VERSION. The
-  # "slim" image contains only essential packages, making it smaller and faster
-  # to download.
+  # SaturnCI passes your app's .ruby-version in as SATURNCI_RUBY_VERSION.
   ARG SATURNCI_RUBY_VERSION
   FROM ruby:\${SATURNCI_RUBY_VERSION}-slim
 
-  # Set /app as the working directory. All subsequent commands will run from here.
   WORKDIR /app
 
-  # Update the package list to get the latest available packages.
   RUN apt-get update && apt-get install -y \\
-
-      # Install compilers and build tools needed for native gem compilation.
       build-essential \\
-
-      # Install PostgreSQL client libraries for database connections.
       libpq-dev \\
-
-      # Install JavaScript runtime for asset processing.
       nodejs \\
-
-      # Install version control system for dependency management.
       git \\
-
-      # Install libyaml headers required to build the psych gem on Ruby 3.2+.
       libyaml-dev \\
-
-      # Clean up package cache to reduce image size.
       && rm -rf /var/lib/apt/lists/*
 
   COPY Gemfile Gemfile.lock ./
