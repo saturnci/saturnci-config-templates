@@ -20,9 +20,11 @@ empty_directory ".saturnci/workflows"
 empty_directory ".saturnci/jobs/test_suite"
 empty_directory ".saturnci/environments/rspec"
 
-# The test suite job. It declares which environment it runs in.
+# The test suite job. It declares which environment it runs in, and which
+# service in that environment runs the tests.
 create_file ".saturnci/jobs/test_suite/config.yml", <<~CONFIG
   environment: rspec
+  service: saturnci_test_app
 CONFIG
 
 # Dockerfile for the rspec environment
@@ -103,10 +105,10 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
   #   docker-compose up -d
   #
   #   Get shell in app container
-  #   docker-compose run saturn_test_app bash
+  #   docker-compose run saturnci_test_app bash
   #
   #   Run tests
-  #   docker-compose run saturn_test_app bundle exec rspec
+  #   docker-compose run saturnci_test_app bundle exec rspec
   #
   #   Stop and remove containers
   #   docker-compose down
@@ -114,9 +116,9 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
   version: "3.8"
 
   services:
-    saturn_test_app:
+    saturnci_test_app:
       # This hostname is what will go in the Capybara host config.
-      hostname: saturn_test_app
+      hostname: saturnci_test_app
 
       image: \${SATURN_TEST_APP_IMAGE_URL}
       build:
@@ -290,7 +292,7 @@ say "Next steps:"
 say "1. Run 'bundle install' to install any new gems"
 say "2. Navigate to the environment: cd .saturnci/environments/rspec"
 say "3. Start the test environment: docker-compose up -d"
-say "4. Run your tests: docker-compose run saturn_test_app bundle exec rspec"
+say "4. Run your tests: docker-compose run saturnci_test_app bundle exec rspec"
 say "5. Stop the environment: docker-compose down"
 say ""
 say "You can now add this repository to SaturnCI at https://app.saturnci.com"
