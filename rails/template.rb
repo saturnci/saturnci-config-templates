@@ -38,10 +38,11 @@ create_file ".saturnci/environments/rspec/Dockerfile", <<~DOCKERFILE
   # This image is used by the environment's docker-compose.yml to create the test
   # execution environment.
 
-  # Use ruby:4.0.1-slim as the base image. This provides a pre-built Linux
-  # environment with Ruby already installed. The "slim" version contains only
-  # essential packages, making it smaller and faster to download.
-  FROM ruby:4.0.1-slim
+  # SaturnCI passes your app's .ruby-version in as SATURNCI_RUBY_VERSION. The
+  # "slim" image contains only essential packages, making it smaller and faster
+  # to download.
+  ARG SATURNCI_RUBY_VERSION
+  FROM ruby:\${SATURNCI_RUBY_VERSION}-slim
 
   # Set /app as the working directory. All subsequent commands will run from here.
   WORKDIR /app
