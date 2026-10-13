@@ -90,8 +90,6 @@ create_file "#{rspec_environment_dir}/Dockerfile", <<~DOCKERFILE
 
   RUN bundle exec rails assets:precompile && \\
       rm -rf tmp/cache node_modules/.cache
-
-  CMD ["bundle", "exec", "rails", "server", "-b", "0.0.0.0"]
 DOCKERFILE
 
 # docker-compose.yml for the rspec environment
