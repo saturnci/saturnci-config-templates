@@ -146,6 +146,7 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
         # No database name in the URL, so Rails keeps the one from your own
         # config/database.yml and takes only the connection details from here.
         DATABASE_URL: postgres://postgres@postgres:5432
+        SATURNCI_CHROME_URL: http://chrome:4444/
         RAILS_ENV: test
 
       healthcheck:
@@ -173,11 +174,6 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
     chrome:
       image: seleniarm/standalone-chromium
       shm_size: 2g
-      healthcheck:
-        test: ["CMD", "curl", "--fail", "http://localhost:4444/wd/hub/status"]
-        interval: 10s
-        timeout: 5s
-        retries: 5
 
   volumes:
     postgresql:
@@ -297,7 +293,7 @@ create_file "spec/support/saturnci_capybara.rb", <<~CAPYBARA
       options.add_argument("--no-sandbox")
       options.add_argument("--disable-dev-shm-usage")
 
-      Capybara::Selenium::Driver.new(app, browser: :remote, url: "http://chrome:4444/", options: options)
+      Capybara::Selenium::Driver.new(app, browser: :remote, url: ENV.fetch("SATURNCI_CHROME_URL"), options: options)
     end
 
     Capybara.server_host = "0.0.0.0"
