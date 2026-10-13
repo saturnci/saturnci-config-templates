@@ -13,7 +13,6 @@ say "Adding SaturnCI configuration to your Rails application..."
 #     environments/rspec/                 <- the reusable environment the job runs in
 #       Dockerfile
 #       docker-compose.yml
-#       database.yml
 #       .env
 #       .dockerignore
 
@@ -125,7 +124,6 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
         dockerfile: .saturnci/environments/rspec/Dockerfile
       volumes:
         - ../../../:/app
-        - ./database.yml:/app/config/database.yml:ro
       depends_on:
         - postgres
         - chrome
@@ -140,10 +138,9 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
 
       environment:
         DOCKER_ENV: "true"
-        DATABASE_USERNAME: saturn
-        DATABASE_PASSWORD: ""
-        DATABASE_HOST: postgres
-        DATABASE_PORT: 5432
+        # No database name in the URL, so Rails keeps the one from your own
+        # config/database.yml and takes only the connection details from here.
+        DATABASE_URL: postgres://saturn@postgres:5432
         RAILS_ENV: test
 
       healthcheck:
@@ -182,17 +179,6 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
   volumes:
     postgresql:
 DOCKERCOMPOSE
-
-# database.yml for the test environment
-create_file ".saturnci/environments/rspec/database.yml", <<~DATABASE
-  test:
-    database: saturn_test
-    adapter: postgresql
-    encoding: unicode
-    username: <%= ENV.fetch("DATABASE_USERNAME") %>
-    host: <%= ENV.fetch("DATABASE_HOST") %>
-    port: <%= ENV.fetch("DATABASE_PORT") %>
-DATABASE
 
 # Basic .env file (without sensitive credentials)
 create_file ".saturnci/environments/rspec/.env", <<~ENV
