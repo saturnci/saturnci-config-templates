@@ -171,7 +171,6 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
 
     chrome:
       image: seleniarm/standalone-chromium
-      hostname: chrome
       shm_size: 2g
       healthcheck:
         test: ["CMD", "curl", "--fail", "http://localhost:4444/wd/hub/status"]
