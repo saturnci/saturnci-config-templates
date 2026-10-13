@@ -80,8 +80,6 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
   # This Docker Compose file specifies the environment that SaturnCI uses to run
   # your tests.
 
-  version: "3.8"
-
   services:
     saturnci_test_app:
       # This hostname is what will go in the Capybara host config.
