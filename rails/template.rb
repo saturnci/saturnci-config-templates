@@ -149,12 +149,6 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
         SATURNCI_CHROME_URL: http://chrome:4444/
         RAILS_ENV: test
 
-      healthcheck:
-        test: ["CMD", "curl", "--fail", "http://localhost:3000"]
-        interval: 10s
-        timeout: 5s
-        retries: 10
-
     postgres:
       image: postgres:17.2-alpine
       volumes:
@@ -163,11 +157,6 @@ create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
         PSQL_HISTFILE: /usr/src/app/log/.psql_history
         POSTGRES_HOST_AUTH_METHOD: trust
       restart: on-failure
-      healthcheck:
-        test: ["CMD-SHELL", "pg_isready -U postgres"]
-        interval: 10s
-        timeout: 2s
-        retries: 10
       logging:
         driver: none
 
