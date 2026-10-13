@@ -16,9 +16,11 @@ say "Adding SaturnCI configuration to your Rails application..."
 #       .env
 #       .dockerignore
 
+rspec_environment_dir = ".saturnci/environments/rspec"
+
 empty_directory ".saturnci/workflows"
 empty_directory ".saturnci/jobs/test_suite"
-empty_directory ".saturnci/environments/rspec"
+empty_directory rspec_environment_dir
 
 # The test suite job. It declares which environment it runs in, and which
 # service in that environment runs the tests.
@@ -28,7 +30,7 @@ create_file ".saturnci/jobs/test_suite/config.yml", <<~CONFIG
 CONFIG
 
 # Dockerfile for the rspec environment
-create_file ".saturnci/environments/rspec/Dockerfile", <<~DOCKERFILE
+create_file "#{rspec_environment_dir}/Dockerfile", <<~DOCKERFILE
   # SaturnCI Test Environment Docker Image
   #
   # This Dockerfile creates the container image that SaturnCI uses to run
@@ -93,14 +95,14 @@ create_file ".saturnci/environments/rspec/Dockerfile", <<~DOCKERFILE
 DOCKERFILE
 
 # docker-compose.yml for the rspec environment
-create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
+create_file "#{rspec_environment_dir}/docker-compose.yml", <<~DOCKERCOMPOSE
   # SaturnCI Docker Environment
   #
   # This Docker Compose file specifies the environment that SaturnCI uses to run
   # your tests.
   #
   # Local Development Usage:
-  #   cd .saturnci/environments/rspec
+  #   cd #{rspec_environment_dir}
   #
   #   Start all services
   #   docker-compose up -d
@@ -124,7 +126,7 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
       image: \${SATURN_TEST_APP_IMAGE_URL}
       build:
         context: ../../..
-        dockerfile: .saturnci/environments/rspec/Dockerfile
+        dockerfile: #{rspec_environment_dir}/Dockerfile
       volumes:
         - ../../../:/app
       depends_on:
@@ -183,7 +185,7 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
 DOCKERCOMPOSE
 
 # Basic .env file (without sensitive credentials)
-create_file ".saturnci/environments/rspec/.env", <<~ENV
+create_file "#{rspec_environment_dir}/.env", <<~ENV
   DATABASE_USERNAME=saturn
   DATABASE_PASSWORD=""
   DATABASE_HOST=127.0.0.1
@@ -193,7 +195,7 @@ create_file ".saturnci/environments/rspec/.env", <<~ENV
 ENV
 
 # .dockerignore for the environment
-create_file ".saturnci/environments/rspec/.dockerignore", <<~DOCKERIGNORE
+create_file "#{rspec_environment_dir}/.dockerignore", <<~DOCKERIGNORE
   # Version control
   .git
   .gitignore
@@ -320,7 +322,7 @@ say "SaturnCI configuration has been added to your Rails application!"
 say ""
 say "Next steps:"
 say "1. Run 'bundle install' to install any new gems"
-say "2. Navigate to the environment: cd .saturnci/environments/rspec"
+say "2. Navigate to the environment: cd #{rspec_environment_dir}"
 say "3. Start the test environment: docker-compose up -d"
 say "4. Run your tests: docker-compose run saturnci_test_app bundle exec rspec"
 say "5. Stop the environment: docker-compose down"
