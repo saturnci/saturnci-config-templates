@@ -48,8 +48,6 @@ create_file "#{rspec_environment_dir}/Dockerfile", <<~DOCKERFILE
   # Set /app as the working directory. All subsequent commands will run from here.
   WORKDIR /app
 
-  ENV RAILS_ENV=test
-
   # Update the package list to get the latest available packages.
   RUN apt-get update && apt-get install -y \\
 
