@@ -139,7 +139,7 @@ create_file ".saturnci/environments/rspec/docker-compose.yml", <<~DOCKERCOMPOSE
         - .env
 
       environment:
-        DOCKER_ENV: "true"
+        SATURNCI_ENV: "true"
         # No database name in the URL, so Rails keeps the one from your own
         # config/database.yml and takes only the connection details from here.
         DATABASE_URL: postgres://saturn@postgres:5432
@@ -285,6 +285,36 @@ end
 
 # Generate RSpec configuration if not present
 generate "rspec:install" unless File.exist?("spec/spec_helper.rb")
+
+# In SaturnCI, system specs drive the browser in the environment's chrome
+# service, which reaches the app at the app container's hostname.
+create_file "spec/support/saturnci_capybara.rb", <<~CAPYBARA
+  if ENV["SATURNCI_ENV"].present?
+    Capybara.register_driver :saturnci_chrome do |app|
+      options = Selenium::WebDriver::Chrome::Options.new
+      options.add_argument("--headless")
+      options.add_argument("--no-sandbox")
+      options.add_argument("--disable-dev-shm-usage")
+
+      Capybara::Selenium::Driver.new(app, browser: :remote, url: "http://chrome:4444/", options: options)
+    end
+
+    Capybara.server_host = "0.0.0.0"
+    Capybara.server_port = 3000
+    Capybara.app_host = "http://\#{Socket.gethostname}:3000"
+
+    RSpec.configure do |config|
+      config.before(:each, type: :system) do
+        driven_by :saturnci_chrome
+      end
+    end
+  end
+CAPYBARA
+
+append_to_file "spec/rails_helper.rb", <<~RUBY
+
+  require_relative "support/saturnci_capybara"
+RUBY
 
 say "SaturnCI configuration has been added to your Rails application!"
 say ""
