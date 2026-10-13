@@ -33,8 +33,8 @@ create_file "#{rspec_environment_dir}/Dockerfile", <<~DOCKERFILE
   # SaturnCI Test Environment Docker Image
   #
   # This Dockerfile creates the container image that SaturnCI uses to run
-  # your tests. It includes all necessary dependencies for a Rails application with
-  # PostgreSQL and handles asset precompilation during the build process.
+  # your tests. It holds Ruby, system packages, and gems. The app's code is mounted
+  # in at run time, and SaturnCI precompiles assets then.
   #
   # This image is used by the environment's docker-compose.yml to create the test
   # execution environment.
@@ -73,22 +73,6 @@ create_file "#{rspec_environment_dir}/Dockerfile", <<~DOCKERFILE
 
   COPY Gemfile Gemfile.lock ./
   RUN bundle install && rm -rf /usr/local/bundle/cache/*
-
-  # Copy all application files. Use .dockerignore to exclude unnecessary files.
-  COPY . ./
-
-  # Dummy database environment variables required for asset precompilation.
-  # Rails loads the application environment during asset compilation, which
-  # evaluates database.yml and may trigger database connections in initializers.
-  # These dummy values prevent build failures when no database is available.
-  ENV DATABASE_NAME=dummy_database_name
-  ENV DATABASE_USERNAME=dummy_database_username
-  ENV DATABASE_PASSWORD=dummy_database_password
-  ENV DATABASE_HOST=localhost
-  ENV DATABASE_PORT=5432
-
-  RUN bundle exec rails assets:precompile && \\
-      rm -rf tmp/cache node_modules/.cache
 DOCKERFILE
 
 # docker-compose.yml for the rspec environment
