@@ -9,8 +9,7 @@ say "Adding SaturnCI configuration to your Rails application..."
 #
 #   .saturnci/
 #     workflows/default_workflow.rb       <- what runs on every push
-#     jobs/test_suite/config.yml          <- the test suite job, points at an environment
-#     environments/rspec/                 <- the reusable environment the job runs in
+#     environments/rspec/                 <- the reusable environment the test suite runs in
 #       Dockerfile
 #       docker-compose.yml
 #       .dockerignore
@@ -18,15 +17,7 @@ say "Adding SaturnCI configuration to your Rails application..."
 rspec_environment_dir = ".saturnci/environments/rspec"
 
 empty_directory ".saturnci/workflows"
-empty_directory ".saturnci/jobs/test_suite"
 empty_directory rspec_environment_dir
-
-# The test suite job. It declares which environment it runs in, and which
-# service in that environment runs the tests.
-create_file ".saturnci/jobs/test_suite/config.yml", <<~CONFIG
-  environment: rspec
-  service: saturnci_test_app
-CONFIG
 
 # Dockerfile for the rspec environment
 create_file "#{rspec_environment_dir}/Dockerfile", <<~DOCKERFILE
@@ -130,8 +121,10 @@ DOCKERIGNORE
 create_file ".saturnci/workflows/default_workflow.rb", <<~WORKFLOW
   # SaturnCI runs this file on every push. It decides what jobs to run.
   #
-  # This default version runs the test suite and finishes. As you add jobs under
-  # .saturnci/jobs, start them here too.
+  # This default version runs the test suite and finishes. The create call says
+  # which environment the suite runs in, which service in that environment runs
+  # it, and the command that runs it. As you add jobs under .saturnci/jobs,
+  # start them here too.
   class DefaultWorkflow
     def initialize(env: ENV)
       @env = env
@@ -141,6 +134,9 @@ create_file ".saturnci/workflows/default_workflow.rb", <<~WORKFLOW
       test_suite_run = workflow_run.test_suite_runs.create(
         job_name: "test_suite",
         task_adapter_name: "rails_rspec",
+        environment_name: "rspec",
+        service_name: "saturnci_test_app",
+        command: "bundle exec rspec",
         idempotent: true
       )
 
